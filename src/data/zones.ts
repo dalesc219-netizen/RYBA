@@ -1,4 +1,4 @@
-import { LatLngExpression } from 'leaflet';
+import type { LatLngExpression } from 'leaflet';
 
 // Дарвинский заповедник (примерные координаты зоны ограничения)
 export const darwinReserveCoords: LatLngExpression[] = [

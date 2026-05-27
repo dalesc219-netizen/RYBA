@@ -1,11 +1,12 @@
 import React from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, LayersControl, LayerGroup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, LayersControl, LayerGroup, useMap, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import { renderToString } from 'react-dom/server';
 import { Star } from 'lucide-react';
 import { MAP_CENTER, riverBeds } from '../data/mapData';
 import type { Category, Point } from '../data/mapData';
 import type { CustomPoint } from '../utils/storage';
+import { darwinReserveCoords, ichthyologicalZoneCoords } from '../data/zones';
 
 interface MainMapProps {
   visiblePoints: Point[];
