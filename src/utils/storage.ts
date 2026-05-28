@@ -2,6 +2,7 @@ export interface CustomPoint {
   id: string;
   name: string;
   coords: [number, number];
+  verified?: boolean;
 }
 
 const STORAGE_KEY = 'rybinka_my_points';
