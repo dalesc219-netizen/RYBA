@@ -6,6 +6,10 @@ export interface WeatherData {
   surface_pressure: number;
   wind_speed_10m: number;
   wind_direction_10m: number;
+  is_day: number;
+  cloud_cover: number;
+  sunrise: string;
+  sunset: string;
 }
 
 const FALLBACK_LAT = 58.07;
@@ -23,17 +27,22 @@ export function useWeather() {
     const fetchWeather = async (lat: number, lon: number) => {
       try {
         setLoading(true);
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m`;
+        // We add wind_speed_unit=ms here to use m/s instead of default km/h
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,surface_pressure,wind_speed_10m,wind_direction_10m,is_day,cloud_cover&daily=sunrise,sunset&wind_speed_unit=ms&timezon=auto`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch weather');
         const json = await res.json();
         
-        if (mounted && json.current) {
+        if (mounted && json.current && json.daily) {
           setData({
             temperature_2m: json.current.temperature_2m,
             surface_pressure: Math.round(json.current.surface_pressure * 0.750062),
-            wind_speed_10m: json.current.wind_speed_10m,
+            wind_speed_10m: Math.round(json.current.wind_speed_10m * 10) / 10,
             wind_direction_10m: json.current.wind_direction_10m,
+            is_day: json.current.is_day,
+            cloud_cover: json.current.cloud_cover,
+            sunrise: json.daily.sunrise[0],
+            sunset: json.daily.sunset[0]
           });
           setError(null);
         }
