@@ -2,7 +2,7 @@
 import { Target, Thermometer, Wind, Gauge, Droplets, Fish, MapPin, Search, X, MessageCircle } from 'lucide-react';
 import { Bug } from 'lucide-react';
 import { useAppStore } from '../../core/store';
-import { db } from '../../core/db';
+import { saveCatch, type OfflineCatchRecord } from '../../core/database/localCatchStorage';
 import { useWeather } from '../../hooks/useWeather';
 import { useParserReports } from '../../hooks/useParserReports';
 import { reverseGeocode, forwardGeocode } from '../../utils/geocoding';
@@ -30,12 +30,19 @@ export function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (userLocation) {
       reverseGeocode(userLocation[0], userLocation[1]).then(name => setLocationName(name));
     }
   }, [userLocation]);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = window.setTimeout(() => setToastMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toastMessage]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,20 +68,17 @@ export function Dashboard() {
           setUserLocation([latitude, longitude]);
 
           try {
-            const newCatch = {
+            const newCatch: OfflineCatchRecord = {
               id: crypto.randomUUID(),
               timestamp: Date.now(),
               lat: latitude,
               lng: longitude,
-              weather_snapshot: weather || null,
-              notes: '',
-              tackle: '',
-              media_uris: []
+              notes: ''
             };
 
-            await db.catches.add(newCatch);
+            await saveCatch(newCatch);
             if (navigator.vibrate) navigator.vibrate(200);
-            alert('Черновик поимки сохранен!');
+            setToastMessage('Улов сохранён офлайн!');
           } catch (error) {
             console.error('Failed to save catch:', error);
             alert('Ошибка при сохранении');
@@ -320,6 +324,12 @@ export function Dashboard() {
           )}
         </button>
       </div>
+
+      {toastMessage && (
+        <div className="fixed bottom-32 left-1/2 z-50 -translate-x-1/2 rounded-full bg-emerald-500/95 px-5 py-3 text-sm font-semibold text-slate-950 shadow-2xl border border-emerald-200">
+          {toastMessage}
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

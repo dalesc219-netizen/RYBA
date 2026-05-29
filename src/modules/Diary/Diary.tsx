@@ -1,13 +1,23 @@
-import { useLiveQuery } from 'dexie-react-hooks';
+import { useEffect, useState } from 'react';
 import { MapPin, Clock, Trash2, Camera } from 'lucide-react';
-import { db } from '../../core/db';
+import { deleteCatch, getAllCatches, type OfflineCatchRecord } from '../../core/database/localCatchStorage';
 
 export function Diary() {
-  const catches = useLiveQuery(() => db.catches.orderBy('timestamp').reverse().toArray());
+  const [catches, setCatches] = useState<OfflineCatchRecord[] | null>(null);
+
+  const loadCatches = async () => {
+    const saved = await getAllCatches();
+    setCatches(saved);
+  };
+
+  useEffect(() => {
+    loadCatches();
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Точно удалить эту запись?')) {
-      await db.catches.delete(id);
+      await deleteCatch(id);
+      await loadCatches();
     }
   };
 
