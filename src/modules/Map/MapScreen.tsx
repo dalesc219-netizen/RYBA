@@ -19,7 +19,7 @@ const categoriesInfo: Record<Category, { label: string, icon: React.ReactNode, c
   riverbed: { label: 'Русла', icon: <MapIcon size={24} color="#a16207" />, color: 'brown' },
 };
 
-function App() {
+export function MapScreen() {
   const [activeCategories, setActiveCategories] = useState<Set<Category>>(new Set(Object.keys(categoriesInfo) as Category[]));
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [nearestMode, setNearestMode] = useState(false);
@@ -426,10 +426,9 @@ function App() {
         showDepthMap={showDepthMap}
         depthOpacity={depthOpacity}
         showVerificationLayer={showVerificationLayer}
-        rasterBounds={rasterBounds}
+        
       />
     </div>
   );
 }
 
-export default App;

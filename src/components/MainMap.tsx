@@ -28,6 +28,7 @@ interface MainMapProps {
   rasterOpacity: number;
   showDepthMap: boolean;
   depthOpacity: number;
+
   showVerificationLayer: boolean;
 }
 
@@ -58,7 +59,7 @@ export function MainMap({
   showVerificationLayer,
   showDepthMap,
   depthOpacity,
-  rasterBounds
+  
 }: MainMapProps) {
 
   // Recalculate riverbed coordinates
