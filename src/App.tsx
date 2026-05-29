@@ -1,5 +1,5 @@
 ﻿import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { Wifi, WifiOff } from 'lucide-react';
 import { useAppStore } from './core/store';
 import { ErrorBoundary } from './shared/components/ErrorBoundary';
