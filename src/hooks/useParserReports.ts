@@ -32,9 +32,10 @@ export function useParserReports() {
           hot_lures: Array.isArray(json.hot_lures) ? json.hot_lures : undefined
         });
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!mounted) return;
-        setError(err?.message ?? 'Failed to fetch report');
+        const message = err instanceof Error ? err.message : String(err);
+        setError(message || 'Failed to fetch report');
         setData(null);
       } finally {
         if (mounted) setLoading(false);

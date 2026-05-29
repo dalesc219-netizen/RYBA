@@ -52,8 +52,8 @@ export class ForecastEngine {
       const factors: Factor[] = [];
 
       // Pressure (weight 30 points)
-      let pressureEffect = 0;
-      let pressureReason = 'Неизвестно';
+      let pressureEffect: number;
+      let pressureReason: string;
       if (Math.abs(pressureDelta12) >= 4) {
         pressureEffect = -30;
         pressureReason = 'Резкое изменение давления (>=4 мм/12ч)';
@@ -69,8 +69,8 @@ export class ForecastEngine {
 
       // Wind direction (weight 20 points)
       const dir = getCardinal(weather.wind_direction_10m ?? 0);
-      let windDirEffect = 0;
-      let windDirReason = `${dir}, ${weather.wind_speed_10m} м/с`;
+      let windDirEffect: number;
+      const windDirReason = `${dir}, ${weather.wind_speed_10m} м/с`;
       if (['N','NE','E'].includes(dir)) {
         windDirEffect = -15;
       } else if (['S','SW','W'].includes(dir)) {

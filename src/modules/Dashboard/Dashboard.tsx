@@ -101,24 +101,33 @@ export function Dashboard() {
   const [debugMode, setDebugMode] = useState(false);
   const [debugScenario, setDebugScenario] = useState<0|1|2 | null>(null);
 
-  const baseWeather = weather ?? { wind_speed_10m: 0, wind_direction_10m: 0, surface_pressure: 750, temperature_2m: 10, sunrise: new Date().toISOString(), sunset: new Date().toISOString() };
+  const baseWeather = weather ?? {
+    wind_speed_10m: 0,
+    wind_direction_10m: 0,
+    surface_pressure: 750,
+    temperature_2m: 10,
+    sunrise: new Date().toISOString(),
+    sunset: new Date().toISOString(),
+    is_day: 1,
+    cloud_cover: 0
+  };
 
   const scenarios = {
     0: {
       name: 'Идеально',
-      weather: { ...baseWeather, wind_speed_10m: 3, wind_direction_10m: 225 }, // SW
+      weather: { ...baseWeather, wind_speed_10m: 3, wind_direction_10m: 225, is_day: 1, cloud_cover: 20 }, // SW
       pressureDelta12: 0,
       report: { modifiers: { zander: 1.3, perch: 1.3 }, hot_lures: ['Воблер', 'Твич'], summary: 'Идеальный клёв на русле' }
     },
     1: {
       name: 'Шторм',
-      weather: { ...baseWeather, wind_speed_10m: 8, wind_direction_10m: 45 }, // NE
+      weather: { ...baseWeather, wind_speed_10m: 8, wind_direction_10m: 45, is_day: 0, cloud_cover: 100 }, // NE
       pressureDelta12: 5,
       report: { modifiers: { zander: 0.4, perch: 0.4 }, hot_lures: ['Блесна'], summary: 'Штормовые условия, осторожно' }
     },
     2: {
       name: 'Реальность',
-      weather: { ...baseWeather, wind_speed_10m: 4, wind_direction_10m: 135 }, // SE
+      weather: { ...baseWeather, wind_speed_10m: 4, wind_direction_10m: 135, is_day: 1, cloud_cover: 55 }, // SE
       pressureDelta12: -2,
       report: { modifiers: { zander: 1.0, perch: 1.0 }, hot_lures: [], summary: 'Обычная смена погоды' }
     }
@@ -126,12 +135,11 @@ export function Dashboard() {
 
   // Determine active inputs (allow debug overrides)
   const activeWeather = (debugMode && debugScenario !== null) ? scenarios[debugScenario].weather : weather;
+  const effectiveWeather = activeWeather ?? baseWeather;
   const pressureDelta12 = (debugMode && debugScenario !== null) ? scenarios[debugScenario].pressureDelta12 : 0;
   const activeReport = (debugMode && debugScenario !== null) ? scenarios[debugScenario].report : report;
 
-  const biteForecast = activeWeather
-    ? ForecastEngine.calculateBiteIndex(activeWeather as any, pressureDelta12, activeReport?.modifiers ?? {})
-    : null;
+  const biteForecast = ForecastEngine.calculateBiteIndex(effectiveWeather, pressureDelta12, activeReport?.modifiers ?? {});
 
   return (
     <div className={`flex flex-col h-full text-slate-100 p-4 transition-colors duration-1000 ${getGradientByTime()}`}>

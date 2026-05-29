@@ -46,9 +46,10 @@ export function useWeather() {
           });
           setError(null);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (mounted) {
-          setError(err.message);
+          const message = err instanceof Error ? err.message : String(err);
+          setError(message);
         }
       } finally {
         if (mounted) {

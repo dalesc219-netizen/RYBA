@@ -1,11 +1,13 @@
 import Dexie, { type Table } from 'dexie';
 
+import type { WeatherData } from '../hooks/useWeather';
+
 export interface CatchRecord {
   id: string; // UUID
   timestamp: number;
   lat: number;
   lng: number;
-  weather_snapshot: any; // JSON
+  weather_snapshot: WeatherData | null;
   notes: string;
   tackle: string;
   media_uris: string[]; // JSON array
@@ -14,7 +16,7 @@ export interface CatchRecord {
 export interface WeatherCacheRecord {
   id: number; // Always 1 for current, or could be days
   last_updated: number;
-  forecast_data: any; // JSON
+  forecast_data: Record<string, unknown>; // JSON
 }
 
 export class FishingAppDB extends Dexie {

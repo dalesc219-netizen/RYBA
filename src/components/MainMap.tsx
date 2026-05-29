@@ -10,7 +10,9 @@ import { darwinReserveCoords, ichthyologicalZoneCoords } from '../data/zones';
 import { recalculateCoords } from '../utils/geo';
 import historicalMapUrl from '../assets/karta-rybinskoe-more.jpg';
 import depthMapUrl from '../assets/rybinsk-depth-map.jpg';
-import { WarpedImageOverlay, WARP_GCPS, DEPTH_MAP_GCPS } from './WarpedImageOverlay';
+import { WarpedImageOverlay } from './WarpedImageOverlay';
+import { WARP_GCPS, DEPTH_MAP_GCPS } from './warpedImageOverlayData';
+import type { LeafletEvent } from 'leaflet';
 
 interface MainMapProps {
   visiblePoints: Point[];
@@ -23,7 +25,7 @@ interface MainMapProps {
   onDeleteCustomPoint: (id: string) => void;
   isEditMode: boolean;
   markersOpacity: number;
-  onPointDragEnd: (p: Point | CustomPoint, e: any) => void;
+  onPointDragEnd: (p: Point | CustomPoint, e: LeafletEvent) => void;
   showHistoricalRaster: boolean;
   rasterOpacity: number;
   showDepthMap: boolean;

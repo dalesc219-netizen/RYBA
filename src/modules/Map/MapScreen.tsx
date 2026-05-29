@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Anchor, Church, Trees, Waves, Home, Map as MapIcon, MapPinPlus, Download, Edit3, Eye, Layers, ListOrdered, Image as ImageIcon, Copy } from 'lucide-react';
+import type { LeafletEvent, Marker } from 'leaflet';
 import { historicalPoints } from '../../data/mapData';
 import type { Category, Point } from '../../data/mapData';
 import { getDistance } from '../../utils/geo';
@@ -24,7 +25,7 @@ export function MapScreen() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [nearestMode, setNearestMode] = useState(false);
   const [targetPoint, setTargetPoint] = useState<Point | CustomPoint | null>(null);
-  const [customPoints, setCustomPoints] = useState<CustomPoint[]>([]);
+  const [customPoints, setCustomPoints] = useState<CustomPoint[]>(() => getCustomPoints());
   const [mapPoints, setMapPoints] = useState<Point[]>(historicalPoints);
 
   // Inspector states
@@ -45,10 +46,6 @@ export function MapScreen() {
     [57.8300, 37.8900], // Исходный выверенный South-West
     [58.5900, 39.0100]  // Исходный выверенный North-East
   ]);
-
-  useEffect(() => {
-    setCustomPoints(getCustomPoints());
-  }, []);
 
   const toggleCategory = (cat: Category) => {
     setActiveCategories(prev => {
@@ -113,9 +110,9 @@ export function MapScreen() {
     }
   };
 
-  const handlePointDragEnd = (point: Point | CustomPoint, event: any) => {
+  const handlePointDragEnd = (point: Point | CustomPoint, event: LeafletEvent) => {
     if (!isEditMode) return;
-    const marker = event.target;
+    const marker = event.target as Marker;
     const position = marker.getLatLng();
     const newCoords: [number, number] = [position.lat, position.lng];
     const oldCoordsStr = `${point.coords[0].toFixed(5)}, ${point.coords[1].toFixed(5)}`;
