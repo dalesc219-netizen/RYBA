@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { Target, Thermometer, Wind, Gauge, Droplets, Fish, MapPin, Search, X, MessageCircle } from 'lucide-react';
+import { Bug } from 'lucide-react';
 import { useAppStore } from '../../core/store';
 import { db } from '../../core/db';
 import { useWeather } from '../../hooks/useWeather';
@@ -94,9 +95,42 @@ export function Dashboard() {
     }
   };
 
-  const pressureTrend = 1;
-  const biteForecast = weather
-    ? ForecastEngine.calculateBiteIndex(weather, pressureTrend, report?.modifiers ?? {})
+  
+
+  // Debug / mock scenarios
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugScenario, setDebugScenario] = useState<0|1|2 | null>(null);
+
+  const baseWeather = weather ?? { wind_speed_10m: 0, wind_direction_10m: 0, surface_pressure: 750, temperature_2m: 10, sunrise: new Date().toISOString(), sunset: new Date().toISOString() };
+
+  const scenarios = {
+    0: {
+      name: 'Идеально',
+      weather: { ...baseWeather, wind_speed_10m: 3, wind_direction_10m: 225 }, // SW
+      pressureDelta12: 0,
+      report: { modifiers: { zander: 1.3, perch: 1.3 }, hot_lures: ['Воблер', 'Твич'], summary: 'Идеальный клёв на русле' }
+    },
+    1: {
+      name: 'Шторм',
+      weather: { ...baseWeather, wind_speed_10m: 8, wind_direction_10m: 45 }, // NE
+      pressureDelta12: 5,
+      report: { modifiers: { zander: 0.4, perch: 0.4 }, hot_lures: ['Блесна'], summary: 'Штормовые условия, осторожно' }
+    },
+    2: {
+      name: 'Реальность',
+      weather: { ...baseWeather, wind_speed_10m: 4, wind_direction_10m: 135 }, // SE
+      pressureDelta12: -2,
+      report: { modifiers: { zander: 1.0, perch: 1.0 }, hot_lures: [], summary: 'Обычная смена погоды' }
+    }
+  } as const;
+
+  // Determine active inputs (allow debug overrides)
+  const activeWeather = (debugMode && debugScenario !== null) ? scenarios[debugScenario].weather : weather;
+  const pressureDelta12 = (debugMode && debugScenario !== null) ? scenarios[debugScenario].pressureDelta12 : 0;
+  const activeReport = (debugMode && debugScenario !== null) ? scenarios[debugScenario].report : report;
+
+  const biteForecast = activeWeather
+    ? ForecastEngine.calculateBiteIndex(activeWeather as any, pressureDelta12, activeReport?.modifiers ?? {})
     : null;
 
   return (
@@ -169,61 +203,61 @@ export function Dashboard() {
           )}
         </section>
 
-        <section className="bg-white/10 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl p-5">
+        <section className="bg-white/10 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl p-5 relative">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-white/80 flex items-center gap-2 uppercase tracking-wide">
               <Fish size={18} className="text-white/80" />
               ПРОГНОЗ КЛЁВА
             </h2>
-            {biteForecast && (
-              <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-md">
-                ИНДЕКС: {biteForecast.score}
-              </span>
-            )}
+            <button
+              title="Debug scenarios"
+              onClick={() => { setDebugMode(true); setDebugScenario(prev => (prev === null ? 0 : ((prev + 1) % 3) as 0|1|2)); }}
+              className="absolute top-4 right-4 p-1 opacity-20 hover:opacity-80 transition-opacity"
+            >
+              <Bug size={18} className="text-white/70" />
+            </button>
           </div>
 
           {weatherLoading || !biteForecast ? (
-            <div className="animate-pulse h-24 bg-white/20 rounded-xl w-full"></div>
+            <div className="animate-pulse h-44 bg-white/20 rounded-xl w-full"></div>
           ) : (
-            <div>
-              <p className="text-2xl font-semibold text-white mb-4 drop-shadow-sm">{biteForecast.status}</p>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm font-medium text-white/90 mb-1">
-                    <span>Судак</span>
-                    <span>{biteForecast.species.zander.score}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-emerald-400 to-emerald-300 rounded-full"
-                      style={{ width: `${biteForecast.species.zander.score}%` }}
-                    />
-                  </div>
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-40 h-40 rounded-full flex items-center justify-center" style={{ background: `conic-gradient(#10b981 ${biteForecast.overallScore}%, rgba(255,255,255,0.06) 0)` }}>
+                <div className="w-32 h-32 rounded-full bg-black/60 flex flex-col items-center justify-center">
+                  <div className="text-3xl font-bold text-white">{biteForecast.overallScore}%</div>
+                  <div className="text-xs text-white/70">Итоговый индекс</div>
                 </div>
-                <div>
-                  <div className="flex justify-between text-sm font-medium text-white/90 mb-1">
-                    <span>Окунь</span>
-                    <span>{biteForecast.species.perch.score}%</span>
+              </div>
+
+              <div className="flex-1 w-full">
+                {biteForecast.species.map((s) => (
+                  <div key={s.species} className="mb-3">
+                    <div className="w-full text-left bg-black/20 p-3 rounded-xl flex items-center justify-between border border-white/10">
+                      <div>
+                        <div className="text-sm text-white/90 font-semibold">{s.species}</div>
+                        <div className="text-xs text-white/60">Итог: {s.totalScore}%</div>
+                      </div>
+                      <div className="text-white font-bold">{s.totalScore}%</div>
+                    </div>
+
+                    <div className="mt-2 bg-black/10 rounded-xl p-3 border border-white/5">
+                      <div className="grid grid-cols-1 gap-2">
+                        {s.factors.map((f) => (
+                          <div key={f.name} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`px-2 py-1 text-xs font-medium rounded ${f.status === 'positive' ? 'bg-emerald-600 text-white' : f.status === 'negative' ? 'bg-rose-600 text-white' : 'bg-slate-700 text-white'}`}>{f.value}</div>
+                              <div className="text-sm text-white/80">
+                                <div className="font-medium">{f.name}</div>
+                                <div className="text-xs text-white/60">{f.reason}</div>
+                              </div>
+                            </div>
+                            <div className="text-sm text-white/70">{f.status === 'positive' ? 'Плюс' : f.status === 'negative' ? 'Минус' : ''}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-400 to-amber-300 rounded-full"
-                      style={{ width: `${biteForecast.species.perch.score}%` }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm font-medium text-white/90 mb-1">
-                    <span>Щука</span>
-                    <span>{biteForecast.species.pike.score}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-rose-400 to-rose-300 rounded-full"
-                      style={{ width: `${biteForecast.species.pike.score}%` }}
-                    />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           )}

@@ -1,134 +1,114 @@
 ﻿import type { WeatherData } from '../hooks/useWeather';
 
-export interface SpeciesForecast {
-  score: number;
-  reason: string;
+export interface Factor {
+  name: string;
+  value: string; // e.g. "+10%" or "-15%"
+  status: 'positive' | 'negative' | 'neutral';
+  reason?: string;
 }
 
-export interface ForecastResult {
-  status: string;
-  score: number;
-  species: {
-    zander: SpeciesForecast;
-    perch: SpeciesForecast;
-    pike: SpeciesForecast;
-  };
+export interface SpeciesDetail {
+  species: string;
+  totalScore: number; // 0-100
+  factors: Factor[];
+}
+
+export interface AnalyticsResult {
+  overallScore: number;
+  species: SpeciesDetail[];
 }
 
 export class ForecastEngine {
+  /**
+   * Calculate detailed analytic breakdown per species.
+   * @param weather current weather snapshot
+   * @param pressureDelta12 pressure change over 12h in mm (positive = rise)
+   * @param modifiers social radar multipliers (e.g. { zander: 0.5 })
+   */
   public static calculateBiteIndex(
     weather: WeatherData,
-    pressureTrend: number,
+    pressureDelta12: number,
     modifiers: Record<string, number> = {}
-  ): ForecastResult {
-    const isDay = weather.is_day === 1;
-    const isTwilight = ForecastEngine.checkTwilight(weather);
+  ): AnalyticsResult {
+    const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
-    const zanderReason: string[] = [];
-    let zanderScore = 100;
-    if (isDay && !isTwilight) {
-      zanderScore -= 40;
-      zanderReason.push('Слишком светло');
-    } else if (isTwilight) {
-      zanderReason.push('Сумерки (оптимально)');
-    } else {
-      zanderReason.push('Ночь');
+    function getCardinal(deg: number) {
+      const sectors = ['N','NE','E','SE','S','SW','W','NW'];
+      return sectors[Math.round(((deg %= 360) < 0 ? deg + 360 : deg) / 45) % 8];
     }
 
-    if (Math.abs(pressureTrend) > 2) {
-      zanderScore -= 30;
-      zanderReason.push('Скачок давления');
-    } else {
-      zanderReason.push('Стабильное давление');
-    }
+    const speciesKeys: Array<{ key: string; name: string }> = [
+      { key: 'zander', name: 'Судак' },
+      { key: 'perch', name: 'Окунь' }
+    ];
 
-    if (weather.wind_speed_10m > 5) {
-      zanderScore -= 20;
-      zanderReason.push('Сильный ветер');
-    }
+    const results: SpeciesDetail[] = [];
 
-    const perchReason: string[] = [];
-    let perchScore = 100;
-    if (!isDay) {
-      perchScore -= 50;
-      perchReason.push('Слишком темно');
-    } else {
-      perchReason.push('Хороший свет');
-    }
+    // Common wind wave penalty
+    const wavePenalty = weather.wind_speed_10m > 6 ? -20 : 0;
 
-    if (weather.wind_speed_10m >= 2 && weather.wind_speed_10m <= 5) {
-      perchReason.push('Легкая рябь');
-    } else if (weather.wind_speed_10m < 2) {
-      perchScore -= 10;
-      perchReason.push('Штиль');
-    } else {
-      perchScore -= 20;
-      perchReason.push('Сильный ветер');
-    }
+    for (const s of speciesKeys) {
+      let score = 50; // base
+      const factors: Factor[] = [];
 
-    if (pressureTrend < -2) {
-      perchScore -= 30;
-      perchReason.push('Падение давления');
-    }
-
-    const pikeReason: string[] = [];
-    let pikeScore = 80;
-    if (pressureTrend < 0 && pressureTrend > -4) {
-      pikeScore += 20;
-      pikeReason.push('Слабое падение давления');
-    } else if (pressureTrend > 2) {
-      pikeScore -= 20;
-      pikeReason.push('Рост давления');
-    } else {
-      pikeReason.push('Стабильное давление');
-    }
-
-    if (weather.cloud_cover > 70) {
-      pikeScore += 10;
-      pikeReason.push('Пасмурно');
-    } else {
-      pikeScore -= 10;
-      pikeReason.push('Ясно');
-    }
-
-    const clamp = (value: number) => Math.max(0, Math.min(100, value));
-    const applyModifier = (baseScore: number, key: string) => {
-      const raw = modifiers[key] ?? modifiers[`${key}_multiplier`];
-      if (typeof raw !== 'number' || Number.isNaN(raw)) return clamp(baseScore);
-      return clamp(Math.round(baseScore * raw));
-    };
-
-    zanderScore = applyModifier(zanderScore, 'zander');
-    perchScore = applyModifier(perchScore, 'perch');
-    pikeScore = applyModifier(pikeScore, 'pike');
-
-    const overallScore = clamp(Math.round((zanderScore + perchScore + pikeScore) / 3));
-
-    let status = 'Отличный клёв';
-    if (overallScore < 40) status = 'Фаза пассивности';
-    else if (overallScore < 70) status = 'Средний клёв';
-
-    return {
-      status,
-      score: overallScore,
-      species: {
-        zander: { score: zanderScore, reason: zanderReason.slice(0, 2).join(', ') },
-        perch: { score: perchScore, reason: perchReason.slice(0, 2).join(', ') },
-        pike: { score: pikeScore, reason: pikeReason.slice(0, 2).join(', ') }
+      // Pressure (weight 30 points)
+      let pressureEffect = 0;
+      let pressureReason = 'Неизвестно';
+      if (Math.abs(pressureDelta12) >= 4) {
+        pressureEffect = -30;
+        pressureReason = 'Резкое изменение давления (>=4 мм/12ч)';
+      } else if (Math.abs(pressureDelta12) >= 2) {
+        pressureEffect = -10;
+        pressureReason = 'Небольшая нестабильность давления';
+      } else {
+        pressureEffect = +10;
+        pressureReason = 'Стабильное давление';
       }
-    };
+      score += pressureEffect;
+      factors.push({ name: 'Давление', value: (pressureEffect >= 0 ? '+' : '') + `${pressureEffect}%`, status: pressureEffect >= 0 ? 'positive' : 'negative', reason: pressureReason });
+
+      // Wind direction (weight 20 points)
+      const dir = getCardinal(weather.wind_direction_10m ?? 0);
+      let windDirEffect = 0;
+      let windDirReason = `${dir}, ${weather.wind_speed_10m} м/с`;
+      if (['N','NE','E'].includes(dir)) {
+        windDirEffect = -15;
+      } else if (['S','SW','W'].includes(dir)) {
+        windDirEffect = +10;
+      } else {
+        windDirEffect = 0;
+      }
+      score += windDirEffect;
+      factors.push({ name: 'Ветер (направление)', value: (windDirEffect >= 0 ? '+' : '') + `${windDirEffect}%`, status: windDirEffect >= 0 ? 'positive' : (windDirEffect < 0 ? 'negative' : 'neutral'), reason: windDirReason });
+
+      // Wave / strong wind (applies to all predators)
+      if (wavePenalty !== 0) {
+        score += wavePenalty;
+        factors.push({ name: 'Волна/Скорость ветра', value: `${wavePenalty}%`, status: 'negative', reason: `Скорость ${weather.wind_speed_10m} м/с` });
+      }
+
+      // Other placeholders (sunlight, cloud) could be added later
+
+      // Clamp intermediate weather score
+      const weatherScore = clamp(score);
+
+      // Social radar multiplier (weight 50% as multiplier)
+      const rawMod = modifiers[s.key] ?? modifiers[`${s.key}_multiplier`] ?? modifiers['global'] ?? 1;
+      const mod = typeof rawMod === 'number' && !Number.isNaN(rawMod) ? rawMod : 1;
+
+      const finalScore = clamp(Math.round(weatherScore * mod));
+
+      const modDeltaPercent = Math.round((mod - 1) * 100);
+      const modLabel = (modDeltaPercent >= 0 ? '+' : '') + `${modDeltaPercent}%`;
+      factors.push({ name: 'Сводка с водоема', value: modLabel, status: mod >= 1 ? 'positive' : 'negative', reason: `Множитель ${mod}` });
+
+      results.push({ species: s.name, totalScore: finalScore, factors });
+    }
+
+    const overall = clamp(results.reduce((acc, r) => acc + r.totalScore, 0) / results.length);
+
+    return { overallScore: overall, species: results };
   }
 
-  private static checkTwilight(weather: WeatherData): boolean {
-    if (!weather.sunrise || !weather.sunset) return false;
-
-    const now = Date.now();
-    const sunrise = new Date(weather.sunrise).getTime();
-    const sunset = new Date(weather.sunset).getTime();
-
-    const isSunriseTwilight = Math.abs(now - sunrise) < 3600 * 1000;
-    const isSunsetTwilight = Math.abs(now - sunset) < 3600 * 1000;
-
-    return isSunriseTwilight || isSunsetTwilight;
-  }
+  // NOTE: twilight helper removed — not used in current analytic model
 }
