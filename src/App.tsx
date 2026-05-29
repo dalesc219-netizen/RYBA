@@ -14,7 +14,7 @@ export default function App() {
   const { isOnline } = useAppStore();
 
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <div className="w-screen h-screen bg-[#121212] text-slate-100 overflow-hidden flex flex-col relative">
         {/* Top Status Bar (Minimal) */}
         <header className="absolute top-0 left-0 right-0 h-14 bg-[#1E1E1E]/80 backdrop-blur-md z-[2000] border-b border-slate-800 flex items-center justify-between px-4">
