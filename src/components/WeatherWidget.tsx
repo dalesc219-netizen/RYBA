@@ -8,7 +8,11 @@ interface WeatherData {
   surface_pressure: number;
 }
 
-export function WeatherWidget() {
+interface Props {
+  className?: string;
+}
+
+export function WeatherWidget({ className }: Props) {
   const [data, setData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -32,9 +36,14 @@ export function WeatherWidget() {
       });
   }, []);
 
+  const defaultClasses = className || "absolute top-24 left-4 z-[1000] w-72";
+  const containerClasses = `bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl pointer-events-auto border border-slate-700/50 text-slate-100 ${defaultClasses}`;
+  const loadingClasses = `bg-slate-800/90 backdrop-blur-md p-4 rounded-xl shadow-2xl pointer-events-auto border border-slate-700 flex items-center justify-center h-36 ${defaultClasses}`;
+  const errorClasses = `bg-slate-800/90 backdrop-blur-md p-4 rounded-xl shadow-2xl pointer-events-auto border border-rose-500/50 flex items-center justify-center h-36 ${defaultClasses}`;
+
   if (loading) {
     return (
-      <div className="absolute top-24 left-4 z-[1000] bg-slate-800/90 backdrop-blur-md p-4 rounded-xl shadow-2xl w-64 pointer-events-auto border border-slate-700 flex items-center justify-center h-36">
+      <div className={loadingClasses}>
         <div className="text-sm font-semibold text-slate-300 animate-pulse">Загрузка данных...</div>
       </div>
     );
@@ -42,7 +51,7 @@ export function WeatherWidget() {
 
   if (error || !data) {
     return (
-      <div className="absolute top-24 left-4 z-[1000] bg-slate-800/90 backdrop-blur-md p-4 rounded-xl shadow-2xl w-64 pointer-events-auto border border-rose-500/50 flex items-center justify-center h-36">
+      <div className={errorClasses}>
         <div className="text-sm font-semibold text-rose-400 flex flex-col items-center gap-2">
           <CloudOff size={28} />
           <span>Датчики недоступны</span>
@@ -65,7 +74,7 @@ export function WeatherWidget() {
   const circleColor = isStorm ? 'text-rose-500' : index > 60 ? 'text-emerald-500' : 'text-blue-500';
 
   return (
-    <div className="absolute top-24 left-4 z-[1000] bg-slate-900/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl w-72 pointer-events-auto border border-slate-700/50 text-slate-100">
+    <div className={containerClasses}>
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-bold text-slate-300 text-xs uppercase tracking-widest">Акватория Рыбинки</h3>
       </div>

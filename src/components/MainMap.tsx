@@ -1,13 +1,16 @@
 import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, LayersControl, LayerGroup, useMap, Polygon, ImageOverlay } from 'react-leaflet';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, LayersControl, LayerGroup, useMap, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import { renderToString } from 'react-dom/server';
 import { Star, Target } from 'lucide-react';
-import { MAP_CENTER, MAP_BOUNDS, riverBeds, GCPs, historicalPoints } from '../data/mapData';
+import { MAP_CENTER, riverBeds, GCPs, historicalPoints } from '../data/mapData';
 import type { Category, Point } from '../data/mapData';
 import type { CustomPoint } from '../utils/storage';
 import { darwinReserveCoords, ichthyologicalZoneCoords } from '../data/zones';
 import { recalculateCoords } from '../utils/geo';
+import historicalMapUrl from '../assets/karta-rybinskoe-more.jpg';
+import depthMapUrl from '../assets/rybinsk-depth-map.jpg';
+import { WarpedImageOverlay, WARP_GCPS, DEPTH_MAP_GCPS } from './WarpedImageOverlay';
 
 interface MainMapProps {
   visiblePoints: Point[];
@@ -23,6 +26,8 @@ interface MainMapProps {
   onPointDragEnd: (p: Point | CustomPoint, e: any) => void;
   showHistoricalRaster: boolean;
   rasterOpacity: number;
+  showDepthMap: boolean;
+  depthOpacity: number;
   showVerificationLayer: boolean;
 }
 
@@ -50,7 +55,10 @@ export function MainMap({
   onPointDragEnd,
   showHistoricalRaster,
   rasterOpacity,
-  showVerificationLayer
+  showVerificationLayer,
+  showDepthMap,
+  depthOpacity,
+  rasterBounds
 }: MainMapProps) {
 
   // Recalculate riverbed coordinates
@@ -218,12 +226,21 @@ export function MainMap({
         </Marker>
       )}
 
+      {showDepthMap && (
+        <WarpedImageOverlay
+          imageUrl={depthMapUrl}
+          opacity={depthOpacity}
+          zIndex={9}
+          gcps={DEPTH_MAP_GCPS}
+        />
+      )}
+
       {showHistoricalRaster && (
-        <ImageOverlay
-          url="/karta-rybinskoe-more.jpg.jpg"
-          bounds={MAP_BOUNDS}
+        <WarpedImageOverlay
+          imageUrl={historicalMapUrl}
           opacity={rasterOpacity}
           zIndex={10}
+          gcps={WARP_GCPS}
         />
       )}
 
